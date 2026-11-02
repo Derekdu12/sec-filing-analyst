@@ -1,26 +1,41 @@
 # SEC Filing Analyst
 
-An AI-assisted tool that pulls SEC 10-K filings for major US health insurers, extracts key financials and risk factors, and compares the companies side by side.
+A tool that reads the yearly reports of big US health insurance companies and shows how they compare, using AI to do the slow reading.
 
-**Companies:** UnitedHealth (UNH), Elevance (ELV), Cigna (CI), CVS Health/Aetna (CVS), Humana (HUM), Centene (CNC)
+## What problem does it solve?
+
+Every public company has to publish a yearly report called a **10-K**. These reports are often 200+ pages long. Comparing six companies by hand can take days.
+
+This tool downloads the reports automatically, pulls out the important numbers, and uses AI to summarize the biggest risks. The goal is to understand six companies in minutes instead of days.
+
+## Which companies?
+
+| Ticker | Company |
+|---|---|
+| UNH | UnitedHealth Group |
+| ELV | Elevance Health |
+| CI | Cigna |
+| CVS | CVS Health (Aetna) |
+| HUM | Humana |
+| CNC | Centene |
 
 ## How it works
 
-1. **Data collection:** downloads each company's latest 10-K and its XBRL financial data from the SEC EDGAR API.
-2. **Financial metrics:** revenue, net income, and margins come straight from SEC XBRL data, not from AI, so the numbers are exact.
-3. **AI text analysis:** a large language model reads Item 1A (Risk Factors) and Item 7 (MD&A) and returns structured summaries, each linked to its source in the filing.
-4. **Dashboard:** a Streamlit app to compare companies' metrics and risks side by side.
+1. **Download the reports.** The tool gets each company's latest 10-K from the SEC's free website.
+2. **Get the numbers.** Revenue, profit, and growth come straight from the SEC's official data, not from AI, so they are exact.
+3. **Summarize the text with AI.** AI reads the "Risk Factors" and "Management's Discussion" sections and lists the key points, with a link back to where each point came from.
+4. **Show it on one page.** A simple website lets you pick companies and compare them side by side.
 
-## Status
+## Progress
 
-- [x] Week 1: download 10-K filings and XBRL data
-- [ ] Week 2: financial metrics table
-- [ ] Week 3: AI extraction of risks and outlook
-- [ ] Week 4: Streamlit dashboard
-- [ ] Week 5: accuracy checks
-- [ ] Week 6: deployment and demo
+- [x] Week 1: Download the reports and financial data
+- [ ] Week 2: Build a table of key numbers
+- [ ] Week 3: Use AI to summarize risks
+- [ ] Week 4: Build the comparison website
+- [ ] Week 5: Check the AI's answers for accuracy
+- [ ] Week 6: Publish the website and record a demo
 
-## Run it
+## How to run it
 
 ```bash
 python3 -m venv .venv
@@ -29,8 +44,8 @@ pip install -r requirements.txt
 python fetch_filings.py
 ```
 
-Downloaded data is saved to `data/` (not committed to the repo).
+The downloaded reports are saved in a `data` folder on your computer. They are not uploaded here because they are large and free to download from the SEC.
 
-## Author
+## About me
 
-Derek Du, Dickinson College '28, Data Science & Quantitative Economics
+Derek Du, Dickinson College, Class of 2028. Data Science & Quantitative Economics.
