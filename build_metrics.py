@@ -17,6 +17,11 @@ REVENUE_LABELS = ["Revenues", "RevenueFromContractWithCustomerExcludingAssessedT
 NET_INCOME_LABELS = ["NetIncomeLoss"]
 EPS_LABELS = ["EarningsPerShareDiluted", "IncomeLossFromContinuingOperationsPerDilutedShare"]
 
+# Some companies (like CVS) don't report earnings per share under those labels.
+# For them we calculate it ourselves: profit for shareholders / number of shares.
+DILUTED_INCOME_LABELS = ["NetIncomeLossAvailableToCommonStockholdersDiluted"]
+DILUTED_SHARES_LABELS = ["WeightedAverageNumberOfDilutedSharesOutstanding"]
+
 
 def get_yearly_values(facts, labels):
     """Find one number (like revenue) for each year.
@@ -77,6 +82,8 @@ for ticker in TICKERS:
     revenue = get_yearly_values(facts, REVENUE_LABELS)
     net_income = get_yearly_values(facts, NET_INCOME_LABELS)
     eps = get_yearly_values(facts, EPS_LABELS)
+    diluted_income = get_yearly_values(facts, DILUTED_INCOME_LABELS)
+    diluted_shares = get_yearly_values(facts, DILUTED_SHARES_LABELS)
 
     # Use the 3 most recent years
     years = sorted(revenue.keys())
@@ -102,9 +109,12 @@ for ticker in TICKERS:
             growth = (revenue[year] - revenue[last_year]) / revenue[last_year] * 100
             row["revenue_growth_pct"] = round(growth, 1)
 
-        # Earnings per share
+        # Earnings per share: use the reported number if there is one,
+        # otherwise calculate it
         if year in eps:
             row["eps_diluted"] = eps[year]
+        elif year in diluted_income and year in diluted_shares:
+            row["eps_diluted"] = round(diluted_income[year] / diluted_shares[year], 2)
 
         rows.append(row)
 
