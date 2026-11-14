@@ -22,7 +22,7 @@ YEARS = 3
 METRICS = {
     "revenue": ["Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax"],
     "net_income": ["NetIncomeLoss"],
-    "eps_diluted": ["EarningsPerShareDiluted"],
+    "eps_diluted": ["EarningsPerShareDiluted", "IncomeLossFromContinuingOperationsPerDilutedShare"],
 }
 
 

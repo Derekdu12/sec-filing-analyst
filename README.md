@@ -29,7 +29,7 @@ This tool downloads the reports automatically, pulls out the important numbers, 
 ## Progress
 
 - [x] Week 1: Download the reports and financial data
-- [ ] Week 2: Build a table of key numbers
+- [x] Week 2: Build a table of key numbers
 - [ ] Week 3: Use AI to summarize risks
 - [ ] Week 4: Build the comparison website
 - [ ] Week 5: Check the AI's answers for accuracy
