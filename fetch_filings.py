@@ -1,92 +1,87 @@
-"""
-Week 1: Download SEC data for a group of health insurers.
+# Week 1: Download SEC data for a group of health insurers.
+#
+# For each company, this script saves three files:
+#   data/TICKER/10k.html           the latest annual report (10-K)
+#   data/TICKER/filing_info.json   when it was filed and where it came from
+#   data/TICKER/companyfacts.json  every financial number the company reported
+#
+# How to run: open this file in IDLE and press F5.
 
-For each company this script saves:
-  data/<TICKER>/10k.html           - the latest annual report (10-K)
-  data/<TICKER>/filing_info.json   - date, accession number, source URL
-  data/<TICKER>/companyfacts.json  - all XBRL financial numbers the company has filed
-
-Run:  python fetch_filings.py
-"""
 import json
+import os
 import time
-from pathlib import Path
-
 import requests
 
-# The SEC requires a User-Agent with your name and email, or it blocks requests.
-USER_AGENT = "Derek Du dume@dickinson.edu"
-HEADERS = {"User-Agent": USER_AGENT}
-
 TICKERS = ["UNH", "ELV", "CI", "CVS", "HUM", "CNC"]
-DATA_DIR = Path("data")
-PAUSE = 0.2  # seconds between requests; SEC allows max 10 requests/second
+
+# The SEC blocks requests that don't say who is asking
+HEADERS = {"User-Agent": "Derek Du dume@dickinson.edu"}
 
 
-def get(url):
-    """Download a URL politely and stop with a clear error if it fails."""
+def download(url):
+    """Download one web address and return the response."""
     response = requests.get(url, headers=HEADERS, timeout=60)
-    response.raise_for_status()
-    time.sleep(PAUSE)
+    response.raise_for_status()   # stop with an error if the download failed
+    time.sleep(0.2)               # short pause; the SEC allows 10 requests a second
     return response
 
 
-def ticker_to_cik(tickers):
-    """Look up each ticker's CIK (the SEC's 10-digit company ID)."""
-    table = get("https://www.sec.gov/files/company_tickers.json").json()
-    lookup = {row["ticker"]: str(row["cik_str"]).zfill(10) for row in table.values()}
-    return {t: lookup[t] for t in tickers}
+# Step 1: The SEC identifies companies by a number called a CIK, not by ticker.
+# Download the SEC's list and find the CIK for each of our tickers.
+ticker_list = download("https://www.sec.gov/files/company_tickers.json").json()
 
+ciks = {}
+for entry in ticker_list.values():
+    if entry["ticker"] in TICKERS:
+        # CIKs are written with 10 digits, like 0000731766
+        ciks[entry["ticker"]] = str(entry["cik_str"]).zfill(10)
 
-def latest_10k(cik):
-    """Find the most recent 10-K in the company's filing history."""
-    subs = get(f"https://data.sec.gov/submissions/CIK{cik}.json").json()
-    recent = subs["filings"]["recent"]
-    for form, accession, doc, date in zip(
-        recent["form"], recent["accessionNumber"],
-        recent["primaryDocument"], recent["filingDate"],
-    ):
-        if form == "10-K":
-            return {"company": subs["name"], "cik": cik, "accession": accession,
-                    "document": doc, "filing_date": date}
-    raise ValueError(f"No 10-K found for CIK {cik}")
+# Step 2: For each company, find and download its latest 10-K and its numbers
+for ticker in TICKERS:
+    cik = ciks[ticker]
+    folder = "data/" + ticker
+    os.makedirs(folder, exist_ok=True)
 
+    # Get the company's list of filings (newest first)
+    history = download("https://data.sec.gov/submissions/CIK" + cik + ".json").json()
+    filings = history["filings"]["recent"]
 
-def filing_url(info):
-    folder = info["accession"].replace("-", "")
-    return (f"https://www.sec.gov/Archives/edgar/data/"
-            f"{int(info['cik'])}/{folder}/{info['document']}")
+    # Go through the list until we find the first 10-K
+    for i in range(len(filings["form"])):
+        if filings["form"][i] == "10-K":
+            accession = filings["accessionNumber"][i]
+            document = filings["primaryDocument"][i]
+            filing_date = filings["filingDate"][i]
+            break
 
+    # Build the web address of the report
+    url = ("https://www.sec.gov/Archives/edgar/data/" + str(int(cik)) + "/"
+           + accession.replace("-", "") + "/" + document)
 
-def main():
-    ciks = ticker_to_cik(TICKERS)
+    # Download the 10-K, unless we already have it
+    report_path = folder + "/10k.html"
+    if not os.path.exists(report_path):
+        report = download(url).text
+        file = open(report_path, "w", encoding="utf-8")
+        file.write(report)
+        file.close()
 
-    for ticker, cik in ciks.items():
-        folder = DATA_DIR / ticker
-        folder.mkdir(parents=True, exist_ok=True)
+    # Save the details about this filing
+    info = {"company": history["name"], "cik": cik, "accession": accession,
+            "filing_date": filing_date, "url": url}
+    file = open(folder + "/filing_info.json", "w")
+    json.dump(info, file, indent=2)
+    file.close()
 
-        # 1. Latest 10-K (skip download if we already have it)
-        info = latest_10k(cik)
-        info["url"] = filing_url(info)
-        tenk_path = folder / "10k.html"
-        if not tenk_path.exists():
-            tenk_path.write_text(get(info["url"]).text, encoding="utf-8")
-        (folder / "filing_info.json").write_text(json.dumps(info, indent=2))
+    # Download the financial numbers, unless we already have them
+    facts_path = folder + "/companyfacts.json"
+    if not os.path.exists(facts_path):
+        facts = download("https://data.sec.gov/api/xbrl/companyfacts/CIK" + cik + ".json").text
+        file = open(facts_path, "w")
+        file.write(facts)
+        file.close()
 
-        # 2. XBRL financial data (the exact numbers, used in Week 2)
-        facts_path = folder / "companyfacts.json"
-        if not facts_path.exists():
-            facts = get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json").json()
-            facts_path.write_text(json.dumps(facts))
-        facts = json.loads(facts_path.read_text())
-        n_tags = len(facts["facts"].get("us-gaap", {}))
+    print(ticker, "-", history["name"], "- 10-K filed", filing_date)
 
-        size_mb = tenk_path.stat().st_size / 1_000_000
-        print(f"{ticker:4} {info['company'][:35]:35} 10-K filed {info['filing_date']}  "
-              f"({size_mb:.1f} MB)  {n_tags} XBRL tags")
-
-    print("\nDone. Everything is saved in the data/ folder.")
-
-
-if __name__ == "__main__":
-    main()
+print()
+print("Done. Everything is saved in the data folder.")
