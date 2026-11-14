@@ -6,7 +6,7 @@
 import json
 
 TICKER = "CVS"
-WORD = "PerShare"
+WORD = "Diluted"
 
 file = open("data/" + TICKER + "/companyfacts.json")
 facts = json.load(file)
