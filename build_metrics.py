@@ -24,6 +24,7 @@ def get_yearly_values(facts, labels):
     Returns a dictionary like {2023: 371600000000, 2024: 400300000000}.
     """
     all_numbers = facts["facts"]["us-gaap"]
+    values = {}
 
     for label in labels:
         # Skip this label if the company doesn't use it
@@ -56,17 +57,13 @@ def get_yearly_values(facts, labels):
         table = table.sort_values("filed")
         table = table.drop_duplicates(subset="year", keep="last")
 
-        # Turn the table into a dictionary: year -> value
-        values = {}
+        # Add each year's value to the dictionary, unless an earlier
+        # label already gave us that year
         for index, row in table.iterrows():
-            values[row["year"]] = row["val"]
+            if row["year"] not in values:
+                values[row["year"]] = row["val"]
 
-        # If this label gave us values, we are done
-        if len(values) > 0:
-            return values
-
-    # None of the labels worked
-    return {}
+    return values
 
 
 rows = []
